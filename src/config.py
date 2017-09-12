@@ -1,3 +1,4 @@
+import os.path as path
 config = {
   # Constant variables
   'artists': {
@@ -28,5 +29,6 @@ config = {
   'BASE_URL': "https://www.artprice.com/",
   'FILENAME': 'data_full_test.pickle',
   'OUTFILENAME': 'data_output.xlsx',
-  'CSV_FILENAME': 'output.csv'
+  'CSV_FILENAME': 'output.csv',
+  'DATA_PATH': path.join(path.dirname(path.realpath(__file__)), r'..\data')
 }

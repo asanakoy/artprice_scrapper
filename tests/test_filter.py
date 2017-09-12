@@ -3,6 +3,7 @@ from src.config import config
 import pickle
 import pprint
 
+
 ##
 ## @brief      Reads raw parsed data from a pickle file and filters the 
 ##             content and writes to CSV
@@ -50,7 +51,7 @@ def test_parse_short_lot():
 
 if __name__ == '__main__':
     import os
-    os.chdir('/Users/RicardoGaviria/Projects/artprice_scrapper/data')
+    os.chdir(config['DATA_PATH'])
 
     # test_filter_data()
     test_parse_short_lot()
