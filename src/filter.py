@@ -60,7 +60,7 @@ def filter_data_art_piece_short(lots):
     return filtered_lots
 
 
-def write_to_csv(art_piece_data, filename='test_output.xlsx'):
+def write_to_file(art_piece_data, filename='test_output.xlsx'):
     # take the parsed HTML for a given dictionary of data
     # and generate a CSV file
     df = pd.DataFrame()
@@ -69,6 +69,9 @@ def write_to_csv(art_piece_data, filename='test_output.xlsx'):
         tmp_df = pd.DataFrame(lots)
         df = df.append(tmp_df)
 
-    writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-    df.to_excel(writer, index=False)
-    writer.save()
+    if '.csv' in filename:
+        df.to_csv(filename)
+    else:
+        writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+        df.to_excel(writer, index=False)
+        writer.save()

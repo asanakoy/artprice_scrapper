@@ -17,26 +17,6 @@ def test_get_artist_data_short():
     art_s.get_artist_data_short(test_artist_path, driver, test_filename)
     return driver
 
-
-def test_read_artist_data_short():
-    test_filename = FILENAME
-    test_artist_path = "/artist/144730/beatriz-gonzalez/"
-    with open(test_filename, 'rb') as f:
-        data = pickle.load(f)
-        data[test_artist_path]
-
-    # now try to parse the data from beautiful soup
-    read_data = data[test_artist_path]
-    print read_data[0]
-    return read_data
-
-
-def test_parse_short_lot():
-    data = test_read_artist_data_short()
-    lot = art_s.parse_short_lot(data[0])
-    print lot
-    return lot
-
 if __name__ == '__main__':
     import os
     os.chdir('/Users/RicardoGaviria/Projects/artprice_scrapper/data')
