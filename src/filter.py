@@ -4,7 +4,16 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 import pandas as pd
+import re
 
+##
+## @brief      Parses stored HTML/XML from pickled file
+##
+## @param      lot   a specific art lot (HTML) content
+##
+## @return     lot   in the format specified by 'TEMPLATE_LOT' in configuration
+## @return     divs  the divs found by BeautifulSoup on the lot for debugging purposes
+##
 def parse_short_lot(lot):
     out_lot = config['TEMPLATE_LOT']
     soup = BeautifulSoup(lot, 'lxml')
@@ -26,13 +35,21 @@ def parse_short_lot(lot):
     out_lot['date'] = main_div.date.text,  # year drawn
 
     pars = main_div.find_all('p')
-    type_and_size = pars[1].text
+    type_and_size = pars[2]
 
     # @todo needs to be parsed
-    out_lot['type'] = None  # (str) Painting type
-    out_lot['size'] = None  # (zip(int))size in string width x height
+    type_par = main_div.find('p', text='cm x')
+    #out_lot['type'] = ','.join(type_par.text.split(',')[:-1])  # (str) Painting type
+                                                                    # 
+    
+    out_lot['size'] = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
+    
+    size_split = out_lot['size'].split('x')
+    if len(size_split) == 2:
+        out_lot['width_cm'] = size_split[0].strip('cm')
+        out_lot['height_cm'] = size_split[1].strip('cm')
 
-    # get price estimates
+    # get price estimats
     for span in pars[3].find_all('span', {'ng-show': True}):
         if 'USD' in span['ng-show']:
             out_lot['estimate_price'] = span.text
@@ -42,11 +59,28 @@ def parse_short_lot(lot):
         if 'USD' in span['ng-show']:
             out_lot['hammer_price'] = span.text
 
-    out_lot['auction_house'] = [p.text for p in pars[5:]]
+    # @todo need to find a more effective way of parsing this data
+    #       Maybe look into using siblings to find the data I need?
+    #       https://stackoverflow.com/questions/34295451/find-elements-which-have-a-specific-child-with-beautifulsoup
+    out_lot['auction_house'] = ','.join((p.text for p in pars[-2:]))
     # End of structuring data
 
     # [name, data, location]
-    return out_lot
+    return out_lot, divs
+
+
+def clean_up_short_lot(lot):
+    for attr, data in lot.iteritems():
+        if type(data) is (unicode or str):
+            data = re.sub('[(  )+]', '', data)
+            data = re.sub('[\n]+', ' ', data)
+            lot[attr] = data
+    
+    # Custom cleanup
+    lot['auction_house'] = ','.join((lot['auction_house']).split(','))
+    # @todo remove tuple
+    # lot['date'] = lot['date'].encode('ascii', 'replace')
+    return lot
 
 
 
@@ -54,7 +88,8 @@ def filter_data_art_piece_short(lots):
     import re
     filtered_lots = []
     for lot in lots:
-        filtered_lot = parse_short_lot(lot)
+        filtered_lot, lot_divs = parse_short_lot(lot)
+        clean_up_short_lot(filtered_lot)
         filtered_lots.append(filtered_lot.copy())
     print '{} of {}: '.format(len(filtered_lots), len(lots), filtered_lot['title'])
     return filtered_lots
