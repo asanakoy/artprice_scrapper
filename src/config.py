@@ -30,5 +30,5 @@ config = {
   'FILENAME': 'data_full_test.pickle',
   'OUTFILENAME': 'data_output.xlsx',
   'CSV_FILENAME': 'output.csv',
-  'DATA_PATH': path.join(path.dirname(path.realpath(__file__)), r'..\data')
+  'DATA_PATH': path.join(path.dirname(path.realpath(__file__)), r'../data')
 }

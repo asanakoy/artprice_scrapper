@@ -39,15 +39,16 @@ def parse_short_lot(lot):
 
     # @todo needs to be parsed
     type_par = main_div.find('p', text='cm x')
-    #out_lot['type'] = ','.join(type_par.text.split(',')[:-1])  # (str) Painting type
+
+    # out_lot['type'] = ','.join(type_par.text.split(',')[:-1])  # (str) Painting type
                                                                     # 
-    
+
     out_lot['size'] = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
-    
+
     size_split = out_lot['size'].split('x')
     if len(size_split) == 2:
-        out_lot['width_cm'] = size_split[0].strip('cm')
-        out_lot['height_cm'] = size_split[1].strip('cm')
+        out_lot['width_cm'] = size_split[0]
+        out_lot['height_cm'] = size_split[1]
 
     # get price estimats
     for span in pars[3].find_all('span', {'ng-show': True}):
@@ -72,12 +73,22 @@ def parse_short_lot(lot):
 def clean_up_short_lot(lot):
     for attr, data in lot.iteritems():
         if type(data) is (unicode or str):
-            data = re.sub('[(  )+]', '', data)
+            data = re.sub('  +', '', data)
             data = re.sub('[\n]+', ' ', data)
             lot[attr] = data
-    
+    date_pat = '\d{2} \D{3} \d{4}'
+    date_re = re.compile(date_pat)
     # Custom cleanup
+    # convert from unicode to string
+    lot['auction_house'] = lot['auction_house'].encode('ascii', 'ignore')
+    date = date_re.findall(lot['auction_house'])
+    if not date:
+        date = ''
+    else:
+        date  = date[0]
+    lot['auction_date'] = date
     lot['auction_house'] = ','.join((lot['auction_house']).split(','))
+    lot['auction_house'] = re.sub(date_pat, '', lot['auction_house'])
     # @todo remove tuple
     # lot['date'] = lot['date'].encode('ascii', 'replace')
     return lot

@@ -52,8 +52,8 @@ def test_parse_data_art_piece_short():
     test_output_data = config['artists']
     test_output_data[TEST_ARTIST_PATH] = filtered_data
 
-    fil.write_to_file(test_output_data, 'test_output.xlsx')
-    # pprint.pprint(filtered_data)
+    # fil.write_to_file(test_output_data, 'test_output.xlsx')
+    pprint.pprint(filtered_data)
     
     return filtered_data
 
@@ -73,7 +73,7 @@ def test_parse_short_lot():
     return filtered_lots, divs
 
 if __name__ == '__main__':
-
+    os.chdir(config['DATA_PATH'])
     # test_filter_data()
     test_parse_data_art_piece_short()
     # test_parse_short_lot()
