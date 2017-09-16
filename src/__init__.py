@@ -1,3 +1,3 @@
-from config import config
-import filter
+from src.config import config
+import src.filter
 import scrapper
