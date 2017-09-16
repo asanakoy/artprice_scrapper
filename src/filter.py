@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from src.config import config
 import sys
+import urlparse
 reload(sys)
 sys.setdefaultencoding('utf8')
 import pandas as pd
@@ -14,15 +15,15 @@ import re
 ## @return     lot   in the format specified by 'TEMPLATE_LOT' in configuration
 ## @return     divs  the divs found by BeautifulSoup on the lot for debugging purposes
 ##
-def parse_short_lot(lot):
+def parse(lot):
     out_lot = config['TEMPLATE_LOT']
     soup = BeautifulSoup(lot, 'lxml')
     divs = soup.div.find_all('div')
 
-    # Get the data into structure
+
     out_lot['lot'] = divs[0].p.text
     # relative path to the lot for more info
-    out_lot['address'] = str(divs[2].a['href'])
+    out_lot['address'] = urlparse.urljoin(config['BASE_URL'], str(divs[2].a['href']))
     out_lot['image'] = divs[2].img['src']  # url
     # string Title of the art piece (a {'title'})
     out_lot['title'] = str(soup.find(attrs={'title': True})['title'])
@@ -32,18 +33,23 @@ def parse_short_lot(lot):
             main_div = div
             break
 
-    out_lot['date'] = main_div.date.text,  # year drawn
-
+    out_lot['date'] = ''.join(main_div.find('date').text.encode('ascii', 'ignore'))  # year drawn
+    out_lot['date'] = out_lot['date']
+    out_lot['date'] = main_div.find('date').text
     pars = main_div.find_all('p')
-    type_and_size = pars[2]
-
     # @todo needs to be parsed
-    type_par = main_div.find('p', text='cm x')
+    type_par = pars[2]
 
     # out_lot['type'] = ','.join(type_par.text.split(',')[:-1])  # (str) Painting type
-                                                                    # 
 
-    out_lot['size'] = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
+    size_cm_text = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
+    size_in_text = main_div.find('span', {'ng-show': "unite_to == 'in'"}).text
+    out_lot['size'] = size_cm_text
+
+    type_text = type_par.text
+    type_text = re.sub(size_in_text, '', type_text)
+    type_text = re.sub(size_cm_text, '', type_text)
+    out_lot['type'] =  type_text    
 
     size_split = out_lot['size'].split('x')
     if len(size_split) == 2:
@@ -69,38 +75,59 @@ def parse_short_lot(lot):
     # [name, data, location]
     return out_lot, divs
 
-
-def clean_up_short_lot(lot):
+##
+## @brief      Cleans up the structured data and removes duplicats, 
+##             whitespaces and converts unicode to ascii
+##
+## @param      lot   The lot already in the dictionary structure 
+##                   as expected
+##
+## @return     the resulting filtered lot
+##
+def filter(lot):
     for attr, data in lot.iteritems():
         if type(data) is (unicode or str):
             data = re.sub('  +', '', data)
-            data = re.sub('[\n]+', ' ', data)
+            data = re.sub('[\n]+', '', data)
+            data = data.encode('ascii', 'ignore')
             lot[attr] = data
-    date_pat = '\d{2} \D{3} \d{4}'
+
+    date_pat = '(\d{2} \D{3} \d{4})(,)'
     date_re = re.compile(date_pat)
     # Custom cleanup
     # convert from unicode to string
-    lot['auction_house'] = lot['auction_house'].encode('ascii', 'ignore')
-    date = date_re.findall(lot['auction_house'])
-    if not date:
-        date = ''
+    lot['auction_house'] = lot['auction_house']
+    auction_date = date_re.findall(lot['auction_house'])
+    if not auction_date:
+        auction_date = ''
     else:
-        date  = date[0]
-    lot['auction_date'] = date
+        auction_date  = auction_date[0][0]
+    year = re.findall('\d{4}', lot['date'])
+    if year:
+        lot['date'] = year[0]
+    lot['auction_date'] = auction_date
     lot['auction_house'] = ','.join((lot['auction_house']).split(','))
     lot['auction_house'] = re.sub(date_pat, '', lot['auction_house'])
+    lot['width_cm'] = lot['width_cm'].strip(' cm')
+    lot['height_cm'] = lot['height_cm'].strip(' cm')
     # @todo remove tuple
     # lot['date'] = lot['date'].encode('ascii', 'replace')
     return lot
 
-
-
-def filter_data_art_piece_short(lots):
+##
+## @brief      Parses a list containg the scrapped HTML data containing the 
+##             lot information
+##
+## @param      lots  The lots
+##
+## @return     { description_of_the_return_value }
+##
+def parse_lots(lots):
     import re
     filtered_lots = []
     for lot in lots:
-        filtered_lot, lot_divs = parse_short_lot(lot)
-        clean_up_short_lot(filtered_lot)
+        filtered_lot, lot_divs = parse(lot)
+        filter(filtered_lot)
         filtered_lots.append(filtered_lot.copy())
     print '{} of {}: '.format(len(filtered_lots), len(lots), filtered_lot['title'])
     return filtered_lots
