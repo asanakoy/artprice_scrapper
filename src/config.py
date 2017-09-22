@@ -32,6 +32,8 @@ config = {
           'auction_date_day': None,
           'auction_date_month': None,
           'auction_date_year': None,
+          'category': None,
+          'medium': None
          },
 
   'BASE_URL': "https://www.artprice.com/",

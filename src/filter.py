@@ -40,14 +40,20 @@ def parse(lot):
     # @todo needs to be parsed
     type_par = pars[2]
 
-    size_cm_text = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
-    size_in_text = main_div.find('span', {'ng-show': "unite_to == 'in'"}).text
+    size_cm_el = main_div.find('span', {'ng-show': "unite_to == 'cm'"})  # (zip(int))size in string width x height
+    size_in_el = main_div.find('span', {'ng-show': "unite_to == 'in'"})
+
+    size_cm_text = size_cm_el.text
+    size_in_text = size_in_el.text
+
     out_lot['size'] = size_cm_text
 
     type_text = type_par.text
     type_text = re.sub(size_in_text, '', type_text)
     type_text = re.sub(size_cm_text, '', type_text)
-    out_lot['type'] =  type_text    
+    out_lot['type'] =  type_text
+    out_lot['category'] = type_text.split(',')[0]
+    out_lot['medium']= ','.join(type_text.split(',')[1:])
 
     size_split = out_lot['size'].split('x')
     if len(size_split) == 2:
@@ -142,6 +148,14 @@ def parse_lots(lots):
     return filtered_lots
 
 
+##
+## @brief      Writes the parsed and filtered data to CSV or XLSX file
+##
+## @param      art_piece_data  The art piece data
+## @param      filename        The filename
+##
+## @return     { description_of_the_return_value }
+##
 def write_to_file(art_piece_data, filename='test_output.xlsx'):
     # take the parsed HTML for a given dictionary of data
     # and generate a CSV file
@@ -151,7 +165,7 @@ def write_to_file(art_piece_data, filename='test_output.xlsx'):
         tmp_df = pd.DataFrame(lots)
         tmp_df['artist'] = pd.Series([artist_path for x in range(0,len(tmp_df['auction_house']))])
         df = df.append(tmp_df)
-    columns_ordered = ['artist','lot','title','auction_date','date','type','size','hammer_price','auction_house','width_cm','height_cm','depth_cm','auction_date_day','auction_date_month','auction_date_year','address','image','estimate_price']
+    columns_ordered = ['artist','lot','title','auction_date','date','type', 'category', 'medium','size','hammer_price','auction_house','width_cm','height_cm','depth_cm','auction_date_day','auction_date_month','auction_date_year','address','image','estimate_price']
     df = df.reindex(columns=columns_ordered)
     
     if '.csv' in filename:

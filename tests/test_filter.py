@@ -145,4 +145,6 @@ if __name__ == '__main__':
     # test_filter_data()
     # test_parse_lots()
     # test_parse_short_lot()
-    test_filter()
+    # test_filter()
+    test_parse_artists_data()
+
