@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from src.config import config
 import sys
 import urlparse
+import pickle
 reload(sys)
 sys.setdefaultencoding('utf8')
 import pandas as pd
@@ -19,7 +20,6 @@ def parse(lot):
     out_lot = config['TEMPLATE_LOT']
     soup = BeautifulSoup(lot, 'lxml')
     divs = soup.div.find_all('div')
-
 
     out_lot['lot'] = divs[0].p.text
     # relative path to the lot for more info
@@ -40,8 +40,6 @@ def parse(lot):
     # @todo needs to be parsed
     type_par = pars[2]
 
-    # out_lot['type'] = ','.join(type_par.text.split(',')[:-1])  # (str) Painting type
-
     size_cm_text = main_div.find('span', {'ng-show': "unite_to == 'cm'"}).text  # (zip(int))size in string width x height
     size_in_text = main_div.find('span', {'ng-show': "unite_to == 'in'"}).text
     out_lot['size'] = size_cm_text
@@ -55,6 +53,7 @@ def parse(lot):
     if len(size_split) == 2:
         out_lot['width_cm'] = size_split[0]
         out_lot['height_cm'] = size_split[1]
+        out_lot['depth_cm'] = size_split[2] if len(size_split) > 2 else ''
 
     # get price estimats
     for span in pars[3].find_all('span', {'ng-show': True}):
@@ -76,7 +75,7 @@ def parse(lot):
     return out_lot, divs
 
 ##
-## @brief      Cleans up the structured data and removes duplicats, 
+## @brief      Cleans up the structured data and removes duplicates,
 ##             whitespaces and converts unicode to ascii
 ##
 ## @param      lot   The lot already in the dictionary structure 
@@ -110,6 +109,16 @@ def filter(lot):
     lot['auction_house'] = re.sub(date_pat, '', lot['auction_house'])
     lot['width_cm'] = lot['width_cm'].strip(' cm')
     lot['height_cm'] = lot['height_cm'].strip(' cm')
+    lot['hammer_price'] = lot['hammer_price'].strip('$ ')
+    # Get the day month and year as separate columns
+    auction_date_list = auction_date.split(' ')
+    lot['auction_date_day'] = auction_date_list[0]
+    lot['auction_date_month'] = auction_date_list[1]
+    lot['auction_date_year'] = auction_date_list[2]
+
+    # remove spaces
+    lot['title'] = lot['title'].replace(' ', '_')
+
     # @todo remove tuple
     # lot['date'] = lot['date'].encode('ascii', 'replace')
     return lot
@@ -127,7 +136,7 @@ def parse_lots(lots):
     filtered_lots = []
     for lot in lots:
         filtered_lot, lot_divs = parse(lot)
-        filter(filtered_lot)
+        filtered_lot = filter(filtered_lot)
         filtered_lots.append(filtered_lot.copy())
     print '{} of {}: '.format(len(filtered_lots), len(lots), filtered_lot['title'])
     return filtered_lots
@@ -140,11 +149,30 @@ def write_to_file(art_piece_data, filename='test_output.xlsx'):
 
     for artist_path, lots in art_piece_data.iteritems():
         tmp_df = pd.DataFrame(lots)
+        tmp_df['artist'] = pd.Series([artist_path for x in range(0,len(tmp_df['auction_house']))])
         df = df.append(tmp_df)
-
+    columns_ordered = ['artist','lot','title','auction_date','date','type','size','hammer_price','auction_house','width_cm','height_cm','depth_cm','auction_date_day','auction_date_month','auction_date_year','address','image','estimate_price']
+    df = df.reindex(columns=columns_ordered)
+    
     if '.csv' in filename:
         df.to_csv(filename)
     else:
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
         df.to_excel(writer, index=False)
         writer.save()
+
+
+def main():
+    with open(config['FILENAME']) as f:
+        data = pickle.load(f)
+    filtered_data = {}
+    for artist, lots in data.iteritems():
+        print artist
+        filtered_data[artist] = parse_lots(lots)
+
+    write_to_file(filtered_data, config['OUTFILENAME'])
+
+if __name__ == '__main__':
+    import os
+    os.chdir(config['DATA_PATH'])
+    main()

@@ -33,15 +33,18 @@ def login():
 
     # wait so the site doesnt think you're a bot
     time.sleep(2)
-    driver.find_element_by_id('login').send_keys('ameliapradillag@hotmail.com')
-    driver.find_element_by_id('pass').send_keys('revolutioN1')
+    driver.find_element_by_id('login').send_keys(config['SECRETS']['username'])
+    driver.find_element_by_id('pass').send_keys(config['SECRETS']['password'])
     driver.find_element_by_name('commit').click()
     # wait so the site doesnt think you're a bot
     time.sleep(5)
 
-    pkl_file = open(config['FILENAME'], 'wb')
-    pickle.dump(config['artists'], pkl_file)
-    pkl_file.close()
+    ## Move file setup operations outside of the logging in activity
+    ## This way its more testable
+    
+    # pkl_file = open(config['FILENAME'], 'wb')
+    # pickle.dump(config['artists'], pkl_file)
+    # pkl_file.close()
 
     print '{}: {}'.format(type(config), config)
 
@@ -254,9 +257,14 @@ def main():
 ##
 def append_artists():
     pkl_file = open(config['FILENAME'], 'rb')
+    print os.getcwd()
+
     artists = pickle.load(pkl_file)
     driver = login()
     artist_list = get_list_of_artists(driver)
+    print artist_list
+    print '----'
+    print artists.keys()
     for artist in artist_list:
         if artist not in artists.keys():
             get_artist_lots(artist, driver, config['FILENAME'])
@@ -265,8 +273,10 @@ def append_artists():
 
 if __name__ == '__main__':
     import os
+    os.chdir(config['DATA_PATH'])
     # main()
     # test_filter_data_art_piece()
     # test_parse_short_lot()
     # test_get_artist_data_short()
-    append_artists()
+    # append_artists()
+    raise Exception('Proper main thread required')
